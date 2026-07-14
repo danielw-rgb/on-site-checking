@@ -1,0 +1,12 @@
+{
+  "_comment": "Registry mapping a short client slug to the agency Google account (the Gmail with GSC access) and the GSC property. Copy this file to gsc/clients.json (gitignored) and fill in your clients. Then run: gsc_fetch.py query --client <slug> ... Optional target_keywords are read by traffic-analysis(GSC) for the weekly/monthly update.",
+  "example-client": {
+    "account": "agency1",
+    "property": "sc-domain:example.com",
+    "target_keywords": ["SEO agency", "SEO company", "SEO services", "SEO agency Australia"]
+  },
+  "another-client": {
+    "account": "agency2",
+    "property": "https://www.another-client.com/"
+  }
+}

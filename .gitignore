@@ -1,0 +1,54 @@
+# ============================================================================
+#  Push the FRAMEWORK only (skills + their scripts, connectors, docs, templates).
+#  Every skill's generated output lives in a per-skill workspace under its tool
+#  folder and is regenerable — skills recreate the folders on demand
+#  (scripts makedirs/mkdirSync), so results are never committed.
+# ============================================================================
+
+# --- General ---------------------------------------------------------------
+node_modules/
+*.log
+.DS_Store
+__pycache__/
+*.pyc
+
+# --- Secrets (never commit) ------------------------------------------------
+.env
+gsc/credentials/*
+!gsc/credentials/.gitkeep
+# Real client registry may list client domains — keep only the example tracked
+gsc/clients.json
+# MEMORY.md is a personal running log (client accounts, properties, findings) —
+# it's per-person and confidential. Only MEMORY.example.md (the scaffold) is tracked.
+MEMORY.md
+
+# --- Screaming Frog config is shared across collaborators — keep it tracked -
+!.seospiderconfig
+
+# ============================================================================
+#  Per-skill workspace — regenerated per run, not pushed
+# ============================================================================
+
+# GSC: gsc/<skill>/{data,results}/<client>/…
+gsc/*/data/*
+!gsc/*/data/.gitkeep
+gsc/*/results/*
+!gsc/*/results/.gitkeep
+
+# Ahrefs: ahrefs/<skill>/{input,config,data,results}/…
+ahrefs/*/data/*
+!ahrefs/*/data/.gitkeep
+ahrefs/*/results/*
+!ahrefs/*/results/.gitkeep
+ahrefs/*/input/*
+!ahrefs/*/input/.gitkeep
+ahrefs/*/config/*
+!ahrefs/*/config/.gitkeep
+
+# Screaming Frog is exempt from the per-skill scheme: one crawl feeds many
+# skills, so outputs stay keyed by <domain>/<run-id>.
+screaming-frog/crawls/
+screaming-frog/reports/*
+!screaming-frog/reports/.gitkeep
+screaming-frog/profiles/*
+!screaming-frog/profiles/.gitkeep

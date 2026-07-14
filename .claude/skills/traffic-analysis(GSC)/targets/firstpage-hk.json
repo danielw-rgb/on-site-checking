@@ -1,0 +1,39 @@
+{
+  "client": "firstpage-hk",
+  "property": "https://www.firstpage.hk/",
+  "account": "firstpagedigital2",
+  "note": "Target URL + query watchlist for the recurring weekly/monthly traffic update. URL matching normalizes trailing slash, #fragment and ?query. Duplicates in the source list were removed.",
+  "target_urls": [
+    "https://www.firstpage.hk/seo/",
+    "https://www.firstpage.hk/zh/seo/",
+    "https://www.firstpage.hk/seo-for-ai/",
+    "https://www.firstpage.hk/zh/geo-and-ai-seo-services/",
+    "https://www.firstpage.hk/resources/seo/how-to-choose-the-best-seo-agency-2026-guide/",
+    "https://www.firstpage.hk/zh/resources/seo/how-to-choose-the-best-seo-agency-2026-guide/",
+    "https://www.firstpage.hk/zh/resources/seo/why-do-i-still-need-an-seo-agency-in-hong-kong-in-2026/",
+    "https://www.firstpage.hk/resources/seo/ai-seo-and-geo/top-10-ai-seo-and-geo-agencies-in-hong-kong-2026/",
+    "https://www.firstpage.hk/zh/resources/seo/ai-seo-and-geo/top-10-ai-seo-and-geo-agencies-in-hong-kong-2026/",
+    "https://www.firstpage.hk/faqs/what-is-a-backlink/",
+    "https://www.firstpage.hk/faqs/why-is-my-website-traffic-going-down/"
+  ],
+  "target_keywords": [
+    "seo agency",
+    "seo agency in hong kong",
+    "company for seo",
+    "seo hong kong",
+    "seo agency hong kong",
+    "how to choose an seo agency",
+    "seo服務",
+    "seo專家",
+    "香港seo公司",
+    "seo 廣告公司",
+    "seo 電子商務",
+    "ai seo agency hong kong",
+    "ai seo hong kong",
+    "ai seo agency",
+    "ai seo expert hong kong",
+    "geo",
+    "what is geo",
+    "geo agency"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "_doc": "Template for per-project keyword filters. Copy this file to {project-name}.json (e.g. firstpage-test.json) and edit. Any key set to null is ignored. Delete keys you don't need — they are all optional.",
+
+  "min_volume": null,
+  "max_volume": null,
+
+  "min_global_volume": null,
+  "max_global_volume": null,
+
+  "min_difficulty": null,
+  "max_difficulty": null,
+
+  "min_cpc_usd": null,
+  "max_cpc_usd": null,
+
+  "min_traffic_potential": null,
+  "max_traffic_potential": null,
+
+  "exclude_branded": false,
+
+  "_require_intents_doc": "Keep a row only if it has ANY of these intents. Valid: informational, navigational, commercial, transactional, branded, local.",
+  "require_intents": [],
+
+  "_exclude_intents_doc": "Drop a row if it has ANY of these intents.",
+  "exclude_intents": []
+}
