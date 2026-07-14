@@ -33,6 +33,7 @@ A unified workspace for onsite SEO checks. Tool families — **Ahrefs** (off-pag
     └── reports/                       ← per-run summaries (.txt) + analyzer JSON
 └── gsc/
     ├── CLAUDE.md                      ← GSC family universal rules (OAuth multi-account)
+    ├── GSC_AGENT.md                   ← standalone GSC-agent brief for OTHER platforms (export only; not auto-loaded / no effect on this repo)
     ├── connector/gsc_fetch.py        ← reusable auth + Search Analytics fetch → NDJSON
     ├── credentials/                  ← OAuth client secret + per-account tokens (gitignored)
     ├── clients.json                  ← slug → {account, property} registry (gitignored; .example tracked)
