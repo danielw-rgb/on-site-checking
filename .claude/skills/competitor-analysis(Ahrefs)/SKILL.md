@@ -5,7 +5,7 @@ description: Pull Ahrefs Site Explorer competitor data for a target domain, clea
 
 # Competitor Analysis (Ahrefs)
 
-Wraps `mcp__claude_ai_Ahrefs__site-explorer-organic-competitors` (and related Site Explorer tools) into a raw → cleaned → summary pipeline. Family-wide rules live in `ahrefs/CLAUDE.md`.
+Wraps the Ahrefs MCP `site-explorer-organic-competitors` tool (and related Site Explorer tools) into a raw → cleaned → summary pipeline. Family-wide rules (including the tool-name prefix) live in `ahrefs/CLAUDE.md`.
 
 ## When to use this skill
 
@@ -25,7 +25,7 @@ If `{project-name}` or the target domain is missing, ask before calling any Ahre
 
 ## Step 2 — Fetch raw data via Ahrefs MCP
 
-1. Call `mcp__claude_ai_Ahrefs__doc` for any Site Explorer tool before its first use this session.
+1. Call the Ahrefs MCP `doc` tool for any Site Explorer tool before its first use this session.
 2. Default tool: `site-explorer-organic-competitors`. If the user wants deeper context (top pages, traffic-by-country, referring domains), call the matching `site-explorer-*` tools and stitch them — save each as a separate raw file.
 3. Save the raw JSON:
 

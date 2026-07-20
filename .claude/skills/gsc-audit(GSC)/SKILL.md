@@ -1,13 +1,15 @@
 ---
 name: gsc-audit(GSC)
-description: Run a full Google Search Console audit — cannibalization, low-hanging-fruit (striking-distance) keywords, CTR opportunities, index hygiene (pages indexed but shouldn't be), outdated content, and sitemap indexing — and produce ONE combined report. Use when the user wants a full GSC checkup / health report, or several GSC checks at once in a single document.
+description: Run a full Google Search Console audit — keyword cannibalization (pages competing for the same query / consolidate-canonicalize candidates), low-hanging-fruit (striking-distance) keywords, CTR opportunities, index hygiene (pages indexed but shouldn't be), outdated content, and sitemap indexing (submitted URLs with no impressions / not-indexed candidates) — in ONE combined report. Use for a full GSC checkup / health report, several GSC checks at once, OR any single one of these checks (cannibalization, striking-distance, CTR, index hygiene, outdated content, sitemap-vs-GSC) — run the audit and read the relevant section.
 ---
 
 # GSC Audit (GSC)
 
 Runs six GSC checks off shared pulls and writes **one** combined report (summary + top-N table
-per check + a per-check CSV). Composes the `keyword-cannibalization(GSC)` and
-`sitemap-checking(GSC)` analyzers — this is the intended composition point for those skills.
+per check + a per-check CSV). This is the single GSC checking skill: it bundles its own
+cannibalization and sitemap-indexing analyzers (`analyze_cannibalization.py`,
+`sitemap_index_check.py`), so it is fully self-contained. For a **single** check, run the audit
+and read that check's section/CSV (omit `--pages`/`--sitemap` to skip the page-based checks).
 
 | # | Check | Data |
 | --- | --- | --- |
@@ -20,9 +22,18 @@ per check + a per-check CSV). Composes the `keyword-cannibalization(GSC)` and
 
 ## When to use this skill
 
-- "run a full GSC audit / checkup / health report"
-- the user wants several of the checks above together in one document
-- For a single check in isolation, use that check's own skill instead.
+- "run a full GSC audit / checkup / health report", or several of the checks above at once
+- **Keyword cannibalization** — pages/URLs competing for the same query, what to consolidate /
+  canonicalize / redirect (check 1)
+- **Striking-distance / low-hanging fruit** — queries at position 4–20 to push onto page 1 (check 2)
+- **CTR opportunity** — good rank, low click-through, title/meta rewrites (check 3)
+- **Index hygiene** — admin/cart/etc. URLs getting impressions that shouldn't be indexed (check 4)
+- **Outdated content** — old-year queries/URLs still ranking (check 5)
+- **Sitemap indexing** — sitemap URLs with no GSC impressions (not-indexed / zero-impression
+  candidates) (check 6)
+
+For any single one of these, still run this skill and read the matching section/CSV — there is no
+longer a separate per-check skill.
 
 ## Step 0 — Bootstrap the shared workspace (first run in a project)
 
@@ -109,12 +120,18 @@ cannibalization). Then a section per check with a one-line finding + a top-N tab
 in the CSVs.
 Reading guide:
 - **Cannibalization / Low-hanging fruit / CTR:** ranked by impact (severity / est. extra clicks /
-  missed clicks). Act top-down.
+  missed clicks). Act top-down. Real cannibalization on these sites is usually a page vs a
+  *near-copy* of itself — watch for a page vs its `/…-authenticity/` (or `/…/authenticity/`)
+  variant, its language variant (`/en/…`, `…-en/`), Shopify singular-vs-plural collections
+  (`/collections/x-band` vs `/collections/x-bands`), and overlapping `*-vs-*` comparison articles.
+  Those are consolidate/canonicalize candidates, not distinct pages. (The analyzer strips
+  `#anchor`/`?query-string` variants of the same page by default so they don't fake cannibalization.)
 - **Index hygiene:** pages matching admin/cart/etc. patterns that still get impressions → check
   for `noindex`/robots. Pattern-based, so eyeball for false positives.
 - **Outdated:** old-year queries/URLs still drawing impressions → refresh or repoint.
 - **Sitemap indexing:** missing = in sitemap but no GSC impressions (not-indexed **or** never
-  shown). Confirm a sample via URL Inspection before acting.
+  shown — the API only knows pages that *got impressions*, not true index status). Confirm a
+  sample via URL Inspection before acting.
 
 Point the user at `<date>_report.md`. Record any per-client tuning (brand term, bad-pattern
 additions, recurring issues) in `MEMORY.md`.

@@ -30,9 +30,7 @@ Screaming Frog (crawl-based)
 
 GSC
 - **traffic-analysis** — "give me a weekly/monthly traffic update for {client}"; clicks/impressions/position deltas, target URL + keyword tracking, top movers.
-- **keyword-cannibalization** — "which pages compete for the same query on {client}".
-- **sitemap-checking** — "are {client}'s sitemap URLs indexed / getting impressions".
-- **gsc-audit** — "run a full GSC checkup for {client}"; all GSC checks in one report.
+- **gsc-audit** — "run a full GSC checkup for {client}", or any single check: keyword cannibalization ("which pages compete for the same query"), striking-distance, CTR, index hygiene, outdated content, sitemap indexing ("are {client}'s sitemap URLs indexed / getting impressions"). All in one report.
 
 ## How it's organized
 

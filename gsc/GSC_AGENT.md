@@ -52,9 +52,7 @@ Match the user's intent to one skill, then follow that skill's `SKILL.md`.
 
 | Skill | Use when the user asks… |
 | --- | --- |
-| `keyword-cannibalization` | about keyword cannibalization, pages competing for the same query, multiple URLs ranking for one keyword, which pages to consolidate/canonicalize. |
-| `sitemap-checking` | whether sitemap pages are indexed, which submitted URLs get no impressions, or to audit an XML sitemap against GSC performance. |
-| `gsc-audit` | for a full GSC checkup / health report, or several GSC checks at once in ONE document (cannibalization + striking-distance + CTR + index hygiene + outdated content + sitemap indexing). |
+| `gsc-audit` | for a full GSC checkup / health report, several GSC checks at once, OR any single one of them, in ONE document: keyword cannibalization (pages competing for the same query / consolidate-canonicalize candidates), striking-distance, CTR, index hygiene, outdated content, sitemap indexing (submitted URLs with no impressions). Bundles its own cannibalization + sitemap analyzers. |
 | `traffic-analysis` | for a weekly/monthly traffic report, an organic-traffic summary, "how did traffic change" WoW/MoM, or a client update on rankings for specific pages/keywords (uses a per-client watchlist). |
 
 Each skill lives at `.claude/skills/<name>(GSC)/SKILL.md` with its analyzer script next to it.

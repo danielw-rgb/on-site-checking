@@ -1,12 +1,12 @@
 # Crawl defaults
 
-These are the standing defaults Claude applies to every Screaming Frog crawl in this project. Edit this file to change them — Claude reads it at the start of each crawl (step 0 of the Universal workflow in `CLAUDE.md`).
+These are the standing defaults for every Screaming Frog crawl in this project. They are baked into the binary base config `crawl_default.seospiderconfig` (which is what actually drives crawls — see `screaming-frog/CLAUDE.md`). This file is the human-readable reference for what should be in that binary; keep the two in sync. When re-exporting the config from the SF UI, apply these values.
 
 _Last updated: 2026-06-10_
 
-## Profile values
+## Baseline crawl values
 
-Applied when scaffolding or loading a per-site profile in `./profiles/<domain-slug>.json`.
+Baked into `crawl_default.seospiderconfig`. (Also applied if you scaffold an optional per-site profile in `./profiles/<slug>.json`, but profiles are documentation only and don't push settings into SF.)
 
 | Field | Value | Notes |
 | --- | --- | --- |
@@ -21,7 +21,7 @@ Applied when scaffolding or loading a per-site profile in `./profiles/<domain-sl
 Override the Universal workflow defaults in `CLAUDE.md`:
 
 - **Sitemap** — always ask the user to provide the sitemap URL before crawling. Do not auto-use `/sitemap.xml` or silently reuse a value stored in the profile. Even if `sitemap_urls` exists in the profile, confirm before each crawl.
-- **Recent crawl reuse** — in step 0c, if the most recent `<run-id>` in `./crawls/<domain-slug>/` is **within the last 2 days**, ask the user whether to reuse it via `sf_load_crawl` or start fresh. If older than 2 days, default to a fresh crawl without asking.
+- **Recent crawl reuse** — check `sf_list_crawls` for a crawl of this site already loaded in the SEO Spider. If one exists from **within the last 2 days**, ask the user whether to reuse it via `sf_load_crawl` or start fresh. If older than 2 days, default to a fresh crawl without asking.
 
 ## How to change a default
 

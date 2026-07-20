@@ -4,20 +4,26 @@
 // Checks: missing self-reference, missing x-default, duplicate locale entries,
 // invalid language tags, cross-page reciprocity (return links), and URL normalization.
 //
+// Input: ONE NDJSON export of the Screaming Frog "Hreflang / All" element, read from
+// --input <file> or, if omitted, from stdin.
+//
+// Output: a JSON report is printed to stdout. No files are written by default — the caller
+// turns the stdout into a chat summary (stateless: nothing is persisted to the repo).
+//
 // Usage:
-//   node analyze-hreflang.js --input <ndjson> --output <json> [--host <crawl-host>]
+//   node analyze-hreflang.js --input <hreflang-all.ndjson> [--host <crawl-host>]
+//   sf-export ... | node analyze-hreflang.js
 //
 // --host is optional. If omitted, the host is derived from the first row's Address field.
 // It controls which destinations count as "external" (excluded from intra-crawl reciprocity).
 
 const fs = require('fs');
-const path = require('path');
 
 function parseArgs(argv) {
   const out = {};
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--input' || a === '--output' || a === '--host') {
+    if (a === '--input' || a === '--host') {
       out[a.slice(2)] = argv[++i];
     } else if (a === '-h' || a === '--help') {
       out.help = true;
@@ -28,12 +34,15 @@ function parseArgs(argv) {
 
 const args = parseArgs(process.argv);
 
-if (args.help || !args.input || !args.output) {
-  console.error('Usage: analyze-hreflang.js --input <ndjson> --output <json> [--host <crawl-host>]');
-  process.exit(args.help ? 0 : 1);
+if (args.help) {
+  console.error('Usage: analyze-hreflang.js --input <hreflang-all.ndjson> [--host <crawl-host>]   (or pipe NDJSON on stdin)');
+  process.exit(0);
 }
 
-const rows = fs.readFileSync(args.input, 'utf8').trim().split('\n').map(JSON.parse);
+const rawInput = (args.input ? fs.readFileSync(args.input, 'utf8') : fs.readFileSync(0, 'utf8')).trim();
+const rows = rawInput
+  ? rawInput.split('\n').map(line => { try { return JSON.parse(line); } catch { return null; } }).filter(Boolean)
+  : [];
 
 // Derive crawl host from --host or the first row's Address.
 let crawlHost = args.host;
@@ -188,8 +197,5 @@ const out = {
   full: issues,
 };
 
-fs.mkdirSync(path.dirname(args.output), { recursive: true });
-fs.writeFileSync(args.output, JSON.stringify(out, null, 2));
-
-// Print a compact summary to stdout.
-console.log(JSON.stringify({ crawlHost, totals: out.totals, externalTargets: out.externalTargets, samples: out.samples }, null, 2));
+// Print the full report to stdout. No files are written — the caller turns this into a chat summary.
+console.log(JSON.stringify({ crawlHost, totals: out.totals, externalTargets: out.externalTargets, samples: out.samples, full: out.full }, null, 2));

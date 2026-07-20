@@ -1,29 +1,13 @@
 ---
 name: h1-check(SF)
 description: Audit H1 tags across a crawled site — surfaces pages with missing, duplicate, or multiple H1 elements. Use when the user asks about H1 issues, heading structure, missing or repeated H1s, or pages with more than one H1.
-requires:
-  profile: {}
-  exports:
-    - slug: h1-missing
-      source:
-        type: seo_element
-        element: H1
-        filter: Missing
-    - slug: h1-duplicate
-      source:
-        type: seo_element
-        element: H1
-        filter: Duplicate
-    - slug: h1-multiple
-      source:
-        type: seo_element
-        element: H1
-        filter: Multiple
 ---
 
 # H1 Check
 
-Flags three H1 problem categories from a Screaming Frog crawl: pages with no H1, pages whose H1 duplicates another page's H1, and pages carrying more than one H1.
+Flags three H1 problem categories from a Screaming Frog crawl: pages with no H1, pages carrying more than one H1, and pages whose (indexable) H1 duplicates another page's H1.
+
+This skill is **stateless** — it drives the Screaming Frog MCP and reads the crawl result directly. It writes **nothing** to the repo: the one export it needs goes to the SF server's own base directory, and the findings are returned in chat. Shared crawl mechanics live in `screaming-frog/CLAUDE.md` (read it once per session).
 
 ## When to use this skill
 
@@ -33,61 +17,35 @@ The user asks anything about:
 - multiple H1s, more than one H1, multiple `<h1>` per page
 - heading hierarchy or H1 SEO problems
 
-## Prerequisites (from root CLAUDE.md)
+## Step 1 — Get a crawl (per `screaming-frog/CLAUDE.md`)
 
-Before this skill runs, the universal workflow in the root `CLAUDE.md` must already be complete for this run:
+Complete the shared crawl workflow first: get `SITE_URL`, then either reuse a crawl already loaded in the SEO Spider (`sf_list_crawls` → `sf_load_crawl`) or run a new one (`sf_crawl` with `config_path` pointing at `screaming-frog/crawl_default.seospiderconfig`). **Wait until the crawl has finished or is paused** — the MCP refuses exports while the Spider is busy (`sf_crawl_progress` state must not be `SpiderActiveState`).
 
-1. The user has provided `SITE_URL`.
-2. `<domain-slug>` and `<run-id>` are set.
-3. `sf_crawl` has completed (or `sf_load_crawl` reused a prior crawl).
-4. The run manifest exists at `./screaming-frog/crawls/<domain-slug>/<run-id>/manifest.json`.
+## Step 2 — Export the H1 data to the SF base directory
 
-If any of those are missing, follow the root `CLAUDE.md` workflow first.
+The MCP caps string responses at ~100 kB, so export to a file (it lands in the SF server's base dir, **not** the repo). The MCP only exposes the `All` filter for H1 — the analyzer classifies missing / multiple / duplicate itself.
 
-## Step 1 — Resolve exports (per CLAUDE.md step 4a)
+Call `sf_export_seo_element_urls` with:
 
-The skill declares three exports in its frontmatter (`h1-missing`, `h1-duplicate`, `h1-multiple`), all sourced from `sf_export_seo_element_urls` with `element: h1`. For each one, CLAUDE.md's step 4a calls `manifest.js --has`, exports the NDJSON via `sf_export_seo_element_urls` if missing, and registers it in the manifest. Filter names match Screaming Frog's H1 tab — confirm via `sf_list_available_filters_for_seo_element` with `element: h1` if any export fails (filter labels can vary across SF versions; common alternates: "Missing" / "Duplicate" / "Multiple", lower- or title-cased).
-
-After step 4a, the three files exist at:
-
-- `./screaming-frog/crawls/<domain-slug>/<run-id>/h1-missing.ndjson`
-- `./screaming-frog/crawls/<domain-slug>/<run-id>/h1-duplicate.ndjson`
-- `./screaming-frog/crawls/<domain-slug>/<run-id>/h1-multiple.ndjson`
-
-## Step 2 — Run the analyzer
-
-From the project root:
-
-```bash
-node .claude/skills/h1-check/analyze-h1.js \
-  --run-dir    ./screaming-frog/crawls/<domain-slug>/<run-id> \
-  --output     ./screaming-frog/reports/<domain-slug>/<run-id>/h1-analysis.json
+```json
+{ "seo_element_name": "H1", "filter_name": "All", "file_path": "<slug>-h1-all.ndjson" }
 ```
 
-`--run-dir` is the crawl run folder; the analyzer reads the three `h1-*.ndjson` files from it. It writes the full JSON report to `--output`, a CSV table next to it (same path with `.csv` extension, overridable via `--csv <path>`), and prints a compact summary to stdout. You can invoke it via `sf_run_node_js_script` or the `Bash` tool.
+The response's `path` field is the absolute location of the NDJSON (e.g. `<sf-base-dir>/<slug>-h1-all.ndjson`). Each row has `Address`, `Occurrences`, `H1-1`, `H1-2`, `Indexability`.
 
-**CSV layout:** one row per (URL, issue) pair. Columns: `URL`, `Issue`, `H1-1`, `H1-2` (matching the column names from the source SF NDJSON). `Issue` is `Missing H1` / `Duplicate H1` / `Multiple H1`. For `Missing H1`, both H1 columns are empty; for `Duplicate H1`, only `H1-1` is filled; for `Multiple H1`, both H1 columns are filled (when SF captured both). Open in Excel/Numbers/Sheets for triage.
+## Step 3 — Run the analyzer (reads the export, prints findings)
 
-## Step 3 — Interpret the output
+```bash
+node ".claude/skills/h1-check(SF)/analyze-h1.js" --input "<sf-base-dir>/<slug>-h1-all.ndjson"
+```
 
-Top-level keys in the JSON:
+The analyzer reads that one NDJSON (or the same content piped on stdin), classifies the three issue types, and prints a JSON report to stdout. It writes no files. You can also run it inside the MCP with `sf_run_node_js_script`.
 
-| Key | Meaning |
-| --- | --- |
-| `totals` | Per-category counts: pages missing an H1, pages with duplicate H1 strings, pages carrying multiple H1s. |
-| `samples` | First 20 entries from each issue list — for quick triage. |
-| `full` | Complete issue lists. |
+Classification:
+- **missing** — `H1-1` blank (page has no `<h1>`). High severity for content pages; low for redirects/utility pages.
+- **multiple** — `Occurrences > 1` (more than one `<h1>`). Confusing heading hierarchy. Medium severity.
+- **duplicate** — identical `H1-1` shared by 2+ **indexable** pages (non-indexable pages are excluded — a duplicate H1 there doesn't cost rankings). Grouped into clusters, largest first. Medium severity.
 
-Issue categories:
+## Step 4 — Report to the user (chat only)
 
-- **`missing`** — page has no `<h1>` element. High severity for content pages; low for redirects/utility pages.
-- **`duplicate`** — page's H1 string is identical to one or more other crawled pages'. Often a templating bug or weak per-page metadata. Medium severity.
-- **`multiple`** — page contains more than one `<h1>` element. Confusing heading hierarchy; flag for cleanup. Medium severity.
-
-## Step 4 — Save the summary
-
-Per the root `CLAUDE.md` "save the summary" rule, also write a human-readable summary to:
-
-`./screaming-frog/reports/<domain-slug>/<run-id>/h1-summary.txt`
-
-Include: site URL, crawl date, crawl ID, total pages crawled (from `manifest.json.total_urls_crawled`), counts per category, the top few example URLs from each category, and a pointer to `h1-analysis.json` for the full data.
+Turn the JSON `totals` and `samples` into a short plain-text summary: site URL, whether the crawl was full or partial (pages analyzed), the per-category counts, and the top few example URLs / duplicate clusters. Only mention categories that have findings. Do not write a report file — the SEO Spider holds the crawl, and this summary is the deliverable.

@@ -4,6 +4,18 @@ These rules apply to all Ahrefs-family skills (`keyword-research`, `competitor-a
 
 Routing and the skills index live in the root `CLAUDE.md`.
 
+## MCP access (tool names are prefix-neutral)
+
+Ahrefs data comes from the **Ahrefs MCP server**, which the host platform provides (defined in
+`.mcp.json` as the `ahrefs` server; it connects over OAuth — the client runs a one-time browser
+consent on first use, no secret in `.env`). This repo refers to Ahrefs tools by their **bare
+names** — `doc`, `keywords-explorer-overview`, `site-explorer-organic-competitors`,
+`site-audit-issues`, `management-projects`, etc. The **fully-qualified** name a model actually
+calls is `mcp__<server>__<tool>`, where `<server>` is whatever nickname the host registered the
+Ahrefs server under (e.g. `mcp__ahrefs__keywords-explorer-overview`, or
+`mcp__claude_ai_Ahrefs__keywords-explorer-overview` on claude.ai). Match the bare name against
+the Ahrefs tools available in your session — do not hardcode a prefix.
+
 ## Folder layout (under `ahrefs/`)
 
 One workspace folder per skill; inside it, raw pulls in `data/`, everything the skill
@@ -34,7 +46,7 @@ self-contained, committed unit while its outputs stay in the local workspace.
 
 1. **Ask for `{project}`** — short kebab-case slug (e.g. `acme-q2`). Used as the per-project subfolder under the skill's `data/` and `results/`.
 2. **Confirm task-specific inputs** — each skill enumerates these (e.g. keyword-research needs seed keywords + country). Don't call any Ahrefs tool until they're confirmed.
-3. **Collect raw data via `mcp__claude_ai_Ahrefs__*`** — save the raw JSON exactly as returned to `ahrefs/<skill>/data/{project}/`. Monetary values are in USD cents; the cleaning script handles conversion.
+3. **Collect raw data via the Ahrefs MCP tools** (bare names like `keywords-explorer-overview`; see "MCP access" above) — save the raw JSON exactly as returned to `ahrefs/<skill>/data/{project}/`. Monetary values are in USD cents; the cleaning script handles conversion.
 4. **Run the skill's cleaning script** (`.claude/skills/<skill>(Ahrefs)/<script>.py`) — produces cleaned JSON in `ahrefs/<skill>/results/{project}/`. Filtered file is the source of truth for the summary.
 5. **Write the user-facing summary** to `ahrefs/<skill>/results/{project}/{YYYY-MM-DD}_summary.md`. Answer the user's question; don't recap the data.
 
@@ -69,7 +81,7 @@ If `ahrefs/keyword-research/config/{project}.json` exists, the cleaning script a
 
 ## Notes for the AI
 
-- Always call `mcp__claude_ai_Ahrefs__doc` for an Ahrefs tool **before its first use in a session**.
+- Always call the Ahrefs MCP `doc` tool for an Ahrefs tool **before its first use in a session**.
 - When an Ahrefs response includes `render_with` in its metadata, call the specified render tool — but still persist the raw JSON to `data/{project}/` first.
 - Do not skip the cleaning step, even if the raw data looks small. The filtered file is the source of truth for the summary.
 - The `{YYYY-MM-DD}_summary.md` in `results/{project}/` is the user-facing deliverable. Keep it short and answer the question asked, not everything the data contains.

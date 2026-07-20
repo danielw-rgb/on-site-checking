@@ -64,8 +64,8 @@ python gsc/connector/gsc_fetch.py query \
   - raw pulls → `gsc/<skill>/data/<client>/<YYYY-MM-DD>.ndjson`
   - analysis + summary → `gsc/<skill>/results/<client>/<YYYY-MM-DD>.{json,csv}` and
     `<YYYY-MM-DD>_summary.md`
-  - `<skill>` = the GSC skill folder name (e.g. `gsc-audit`, `keyword-cannibalization`,
-    `sitemap-checking`); `<client>` = short client slug (e.g. `bandletic`). The date is the
+  - `<skill>` = the GSC skill folder name (e.g. `gsc-audit`, `traffic-analysis`);
+    `<client>` = short client slug (e.g. `bandletic`). The date is the
     filename inside the folder; same-day reruns append `_v2`, `_v3` (e.g. `2026-06-30_v2.ndjson`).
     The property is recorded inside the summary, so one client folder can hold multiple properties.
 - **Raw pulls** live under `gsc/<skill>/data/`; **analysis + summaries** under `gsc/<skill>/results/`.

@@ -5,7 +5,7 @@ description: Pull Ahrefs Keywords Explorer data for a seed list in a chosen mark
 
 # Keyword Research (Ahrefs)
 
-Wraps `mcp__claude_ai_Ahrefs__keywords-explorer-*` tools into a reproducible raw → cleaned → summary pipeline. Family-wide rules (naming, MCP `doc` requirement, USD-cents handling) live in `ahrefs/CLAUDE.md` — read it once per session, then follow the steps below.
+Wraps the Ahrefs MCP `keywords-explorer-*` tools into a reproducible raw → cleaned → summary pipeline. Family-wide rules (naming, MCP `doc` requirement, USD-cents handling, tool-name prefix) live in `ahrefs/CLAUDE.md` — read it once per session, then follow the steps below.
 
 ## When to use this skill
 
@@ -27,7 +27,7 @@ Do not call any Ahrefs tool until all three are confirmed.
 
 ## Step 2 — Fetch raw data via Ahrefs MCP
 
-1. Call `mcp__claude_ai_Ahrefs__doc` for any keywords-explorer tool before its first use this session.
+1. Call the Ahrefs MCP `doc` tool for any keywords-explorer tool before its first use this session.
 2. Call the appropriate tool (typically `keywords-explorer-overview`; use `matching-terms`, `related-terms`, or `search-suggestions` if the user asked for expansion). Pass the seed keywords and `country` parameter.
 3. **Push numeric filters into the API `where` clause** when the user gave thresholds (`volume`, `global_volume`, `difficulty`, `cpc` in **USD cents**, `traffic_potential`, `word_count`). This costs zero extra Ahrefs units and avoids re-fetching.
 4. Save the raw JSON exactly as returned (monetary values stay in USD cents; the cleaning script converts):

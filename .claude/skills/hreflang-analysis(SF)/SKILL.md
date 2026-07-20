@@ -1,18 +1,13 @@
 ---
 name: hreflang-analysis(SF)
 description: Audit hreflang annotations across a crawled site — detects missing x-default, duplicate locale entries, invalid language codes, missing self-references, and broken reciprocal return links. Use when the user asks about hreflang, international SEO, language targeting, or locale issues.
-requires:
-  profile: {}
-  exports:
-    - slug: hreflang-contains
-      source:
-        type: bulk_export
-        name: "Hreflang:Contains Hreflang"
 ---
 
 # Hreflang Analysis
 
 Validates hreflang annotations (HTML `<link rel="alternate">`, HTTP `Link` headers, and sitemap entries) from a Screaming Frog crawl and surfaces international SEO issues.
+
+This skill is **stateless** — it drives the Screaming Frog MCP and reads the crawl result directly. It writes **nothing** to the repo: the one export it needs goes to the SF server's own base directory, and the findings are returned in chat. Shared crawl mechanics live in `screaming-frog/CLAUDE.md` (read it once per session).
 
 ## When to use this skill
 
@@ -23,70 +18,45 @@ The user asks anything about:
 - "why doesn't Google serve the right page to users in country X"
 - broken return links between language versions
 
-## Prerequisites (from root CLAUDE.md)
+## Step 1 — Get a crawl (per `screaming-frog/CLAUDE.md`)
 
-Before this skill runs, the universal workflow in the root `CLAUDE.md` must already be complete for this run:
+Complete the shared crawl workflow first: get `SITE_URL`, then either reuse a crawl already loaded in the SEO Spider (`sf_list_crawls` → `sf_load_crawl`) or run a new one (`sf_crawl` with `config_path` pointing at `screaming-frog/crawl_default.seospiderconfig`). **Wait until the crawl has finished or is paused** — the MCP refuses exports while the Spider is busy (`sf_crawl_progress` state must not be `SpiderActiveState`).
 
-1. The user has provided `SITE_URL`.
-2. `<domain-slug>` and `<run-id>` have been set.
-3. `sf_crawl` has completed (or `sf_load_crawl` reused a prior crawl).
+## Step 2 — Export the hreflang data to the SF base directory
 
-If any of those are missing, follow the root `CLAUDE.md` workflow first.
+The MCP caps string responses at ~100 kB, so export to a file (it lands in the SF server's base dir, **not** the repo). Call `sf_export_seo_element_urls` with:
 
-## Step 1 — Export the hreflang annotation NDJSON
-
-The analyzer needs a per-page export where each row carries all hreflang annotations declared for that page (HTML, HTTP header, sitemap), with locale + URL pairs.
-
-1. Call `sf_list_available_bulk_exports` to see the current crawl's available exports.
-2. Look for the Hreflang-related bulk export(s) (typical names: `Hreflang:All` or filters under the `Hreflang` tab such as `Hreflang:Contains Hreflang`). Don't hard-code the name — the available set varies by crawl mode and config.
-3. Call `sf_generate_bulk_export` to write the NDJSON to:
-   `./screaming-frog/crawls/<domain-slug>/<run-id>/hreflang-contains.ndjson`
-   (Use `.ndjson` so each row is one JSON object — that's what the analyzer expects.)
-
-Each row must contain `Address` plus fields like `HTML hreflang 1`, `HTML hreflang 1 URL`, `HTTP hreflang 1`, `HTTP hreflang 1 URL`, `Sitemap hreflang 1`, `Sitemap hreflang 1 URL`, etc. (up to 50 per source). Those are Screaming Frog's default column names — no extra config needed.
-
-## Step 2 — Run the analyzer
-
-From the project root:
-
-```bash
-node .claude/skills/hreflang-analysis/analyze-hreflang.js \
-  --input  ./screaming-frog/crawls/<domain-slug>/<run-id>/hreflang-contains.ndjson \
-  --output ./screaming-frog/reports/<domain-slug>/<run-id>/hreflang-analysis.json \
-  --host   <crawl-host>
+```json
+{ "seo_element_name": "Hreflang", "filter_name": "All", "file_path": "<slug>-hreflang-all.ndjson" }
 ```
 
-`--host` is the hostname of the crawled site (e.g. `www.firstpage.hk`). It controls which destinations are treated as **external** (excluded from intra-crawl reciprocity checks). If you omit it, the analyzer derives it from the first row's `Address`.
+The response's `path` field is the absolute location of the NDJSON. Each row is one page carrying its hreflang annotations: `Address`, `Indexability`, and `HTML hreflang N` / `HTML hreflang N URL` (plus `HTTP …` and `Sitemap …`) locale+URL pairs — Screaming Frog's default column names, no extra config needed.
 
-The script writes the full JSON report to `--output` and prints a compact summary to stdout.
+## Step 3 — Run the analyzer (reads the export, prints findings)
 
-You can invoke it via `sf_run_node_js_script` or directly via the `Bash` tool — either works.
+```bash
+node ".claude/skills/hreflang-analysis(SF)/analyze-hreflang.js" \
+  --input "<sf-base-dir>/<slug>-hreflang-all.ndjson" \
+  --host  <crawl-host>
+```
 
-## Step 3 — Interpret the output
+The analyzer reads that one NDJSON (or the same content piped on stdin) and prints a JSON report to stdout. It writes no files. You can also run it inside the MCP with `sf_run_node_js_script`.
 
-Top-level keys in the JSON:
+`--host` is the hostname of the crawled site (e.g. `www.firstpage.hk`); it controls which destinations count as **external** (excluded from intra-crawl reciprocity). If omitted, it's derived from the first row's `Address`.
 
-| Key | Meaning |
-| --- | --- |
-| `crawlHost` | The host used to separate intra-crawl vs external destinations. |
-| `totals` | Counts per issue category. |
-| `externalTargets` | Domains referenced by hreflang but outside the crawl, with hit counts. Reciprocity can't be verified for these — flag for manual review. |
-| `samples` | First N entries from each issue list (10 for most, 20 for return-link issues). Useful for quick triage. |
-| `full` | Complete issue lists. |
+## Step 4 — Interpret the output
+
+Top-level keys: `crawlHost`, `totals` (counts per category), `externalTargets` (hreflang destinations outside the crawl — reciprocity can't be auto-verified, flag for manual review), `samples`, `full`.
 
 Issue categories:
 
 - **`missingXDefault`** — page declares hreflang but no `x-default`. Google recommends one. Medium severity.
-- **`duplicateLocale`** — same locale points to multiple distinct URLs from the same page. Ambiguous and will likely be ignored by search engines. High severity.
-- **`invalidLanguageCode`** — locale doesn't match a valid ISO 639 / 3166 pattern (e.g. `en_US` instead of `en-US`, or `gb` instead of `en-GB`). High severity.
+- **`duplicateLocale`** — same locale points to multiple distinct URLs from one page. Ambiguous; likely ignored. High severity.
+- **`invalidLanguageCode`** — locale doesn't match a valid ISO 639 / 3166 pattern (e.g. `en_US` instead of `en-US`). High severity.
 - **`selfNotInOwnSet`** — page doesn't reference itself under any locale. Every page in a hreflang group should self-reference. High severity.
 - **`missingReturnLinkIntraCrawl`** — page A points to crawled page B, but B doesn't point back to A. hreflang requires bidirectional links. High severity.
-- **`inconsistentReturnLinkIntraCrawl`** — A points to B as `xx-YY`, but B references A under a *different* locale. Confusing for search engines. Medium severity.
+- **`inconsistentReturnLinkIntraCrawl`** — A points to B as `xx-YY`, but B references A under a *different* locale. Medium severity.
 
-## Step 4 — Save the summary
+## Step 5 — Report to the user (chat only)
 
-Per the root `CLAUDE.md` "save the summary" rule, also write a human-readable summary to:
-
-`./screaming-frog/reports/<domain-slug>/<run-id>/hreflang-summary.txt`
-
-Include: site URL, crawl date, crawl ID, total pages with hreflang, counts per issue category, the top external target domains, and a pointer to `hreflang-analysis.json` for the full data.
+Turn the JSON into a short plain-text summary: site URL, whether the crawl was full or partial (pages with hreflang), the per-category counts, top external target domains, and a few example URLs. Only mention categories that have findings. Do not write a report file — the SEO Spider holds the crawl, and this summary is the deliverable.

@@ -2,7 +2,7 @@
 """gsc-audit(GSC): run all GSC checks off shared pulls and emit ONE combined report.
 
 Checks:
-  1. Keyword cannibalization      (reuses keyword-cannibalization analyzer)   [needs query×page]
+  1. Keyword cannibalization      (analyze_cannibalization.py, bundled)        [needs query×page]
   2. Low-hanging fruit            (queries at pos 4–20 with room to grow)      [needs query×page]
   3. CTR opportunity              (good position, CTR below expected)          [needs query×page]
   4. Index hygiene / shouldn't    (pages getting impressions matching bad URL patterns) [needs page]
@@ -20,7 +20,7 @@ import json
 import os
 import re
 
-SKILLS = os.path.join(os.path.dirname(__file__), "..")
+HERE = os.path.dirname(__file__)
 
 # --- approximate organic CTR by SERP position (blended desktop+mobile) -------
 CTR_CURVE = {1: .28, 2: .15, 3: .10, 4: .07, 5: .05, 6: .04, 7: .03, 8: .025, 9: .02, 10: .018}
@@ -34,7 +34,7 @@ def expected_ctr(pos):
 
 
 def load_module(relpath, name):
-    spec = importlib.util.spec_from_file_location(name, os.path.join(SKILLS, relpath))
+    spec = importlib.util.spec_from_file_location(name, os.path.join(HERE, relpath))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -190,7 +190,7 @@ def check_sitemap(args, page_path):
         return {"title": "Sitemap indexing (in sitemap, missing from GSC)",
                 "finding": "Skipped — no --sitemap and/or no page-dimension pull provided.",
                 "columns": [], "rows": []}
-    sm = load_module("sitemap-checking(GSC)/sitemap_index_check.py", "sitemap_index_check")
+    sm = load_module("sitemap_index_check.py", "sitemap_index_check")
     if re.match(r"^https?://", args.sitemap, re.I):
         sm_urls = sm.extract_sitemap_urls(args.sitemap)
     else:
@@ -292,7 +292,7 @@ def main():
                             r"signin|register|wishlist|search|orders|cdn-cgi)(/|$|\?)")
     args = ap.parse_args()
 
-    cannib = load_module("keyword-cannibalization(GSC)/analyze_cannibalization.py", "cannib")
+    cannib = load_module("analyze_cannibalization.py", "cannib")
     exclude_re = re.compile(args.brand_regex, re.I) if args.brand_regex else None
 
     qp_rows = load_ndjson(args.query_page)

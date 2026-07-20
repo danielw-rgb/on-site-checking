@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""sitemap-checking(GSC): cross-check XML sitemap URLs against GSC performance pages.
+"""gsc-audit(GSC) — sitemap indexing check: cross-check XML sitemap URLs against GSC pages.
 
 "Indexed on GSC" is APPROXIMATED by "appeared in GSC Search performance (got >=1 impression)"
 in the analysis window. The Search Analytics API does not expose true index status, so a
@@ -7,14 +7,12 @@ sitemap URL absent from performance data is a *candidate* for not-indexed / zero
 (it may be indexed but never shown). For authoritative status, spot-check with GSC's URL
 Inspection in the UI.
 
-Standalone:
-  python ".claude/skills/sitemap-checking(GSC)/sitemap_index_check.py" \
-    --sitemap https://example.com/sitemap.xml \
-    --pages   gsc/sitemap-checking/data/<client>/<date>_pages.ndjson \
-    --output  gsc/sitemap-checking/results/<client>/<date>.json
-
 The functions extract_sitemap_urls(), normalize_url(), load_gsc_pages(), analyze() are
-imported and reused by gsc-audit(GSC) for check 4.
+imported by gsc_audit.py for the sitemap-indexing check (check 6). Can also be run standalone:
+  python ".claude/skills/gsc-audit(GSC)/sitemap_index_check.py" \
+    --sitemap https://example.com/sitemap.xml \
+    --pages   gsc/gsc-audit/data/<client>/<date>_pages.ndjson \
+    --output  gsc/gsc-audit/results/<client>/<date>_sitemap.json
 """
 import argparse
 import csv

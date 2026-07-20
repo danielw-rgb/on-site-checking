@@ -50,12 +50,6 @@ Site-specific requirements, exceptions, and credentials/config quirks. One sub-h
 ### gsc-audit(GSC)
 - _(none yet)_
 
-### keyword-cannibalization(GSC)
-- _(none yet)_
-
-### sitemap-checking(GSC)
-- _(none yet)_
-
 ### traffic-analysis(GSC)
 - _(none yet)_
 
