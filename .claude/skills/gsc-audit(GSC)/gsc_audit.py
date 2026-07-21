@@ -25,6 +25,21 @@ HERE = os.path.dirname(__file__)
 # --- approximate organic CTR by SERP position (blended desktop+mobile) -------
 CTR_CURVE = {1: .28, 2: .15, 3: .10, 4: .07, 5: .05, 6: .04, 7: .03, 8: .025, 9: .02, 10: .018}
 
+# Homepage / locale-root / index-file paths. The homepage ranks broadly for many
+# queries, so it always shows keyword overlap + striking-distance rows with limited
+# real CTR upside — we exclude it from checks 1–3 (cannibalization, LHF, CTR).
+HOMEPAGE_RE = re.compile(r"^/(([a-z]{2}(-[a-z]{2})?)/?)?(index\.(html?|php))?$", re.I)
+
+
+def is_homepage(page, base):
+    """True if `page` (a normalized full URL) is the site root, a locale root
+    (/en/, /zh-hk/), or an index file (/index.html, /index.php)."""
+    p = page or ""
+    if base and p.startswith(base):
+        p = p[len(base):]
+    p = re.sub(r"^https?://[^/]+", "", p)  # fallback: strip scheme+host
+    return bool(HOMEPAGE_RE.match(p or "/"))
+
 
 def expected_ctr(pos):
     p = max(1, int(round(pos)))
@@ -80,45 +95,63 @@ def aggregate_qp(rows, normalize):
 def check_cannibalization(cannib, qp_rows, args, exclude_re):
     pairs = cannib.analyze_pairs(qp_rows, args.cannib_min_impr, args.cannib_min_shared,
                                  True, True, exclude_re)
+    home_skipped = 0
+    if args.skip_homepage:
+        kept = [p for p in pairs
+                if not (is_homepage(p["page_a"], args.base) or is_homepage(p["page_b"], args.base))]
+        home_skipped = len(pairs) - len(kept)
+        pairs = kept
     rows = [{"Page A": p["page_a"].replace(args.base, ""), "Page B": p["page_b"].replace(args.base, ""),
              "Shared queries": p["shared_queries"], "Shared impr": p["shared_impressions"],
              "Overlap": f'{p["overlap"]*100:.0f}%',
              "Example queries": " · ".join(p["example_queries"][:3])} for p in pairs]
+    note = (f" Homepage excluded ({home_skipped} pair{'s' if home_skipped != 1 else ''} involving "
+            f"the homepage hidden — it ranks broadly and always shows overlap)." if home_skipped else "")
     return {"title": "Keyword cannibalization (page pairs ranking for the same queries)",
             "finding": f"{len(rows)} page pairs each rank for ≥{args.cannib_min_shared} of the same "
                        f"queries — same-intent duplicates (two takes on one topic / near-duplicate "
-                       f"URLs), not broad terms. Brand & site: excluded.",
+                       f"URLs), not broad terms. Brand & site: excluded." + note,
             "columns": ["Page A", "Page B", "Shared queries", "Shared impr", "Overlap", "Example queries"],
             "rows": rows}
 
 
 def check_low_hanging_fruit(agg, args):
     cand = []
+    home_skipped = 0
     for r in agg:
         if 4 <= r["position"] <= 20 and r["impressions"] >= args.lhf_min_impr:
             upside = r["impressions"] * expected_ctr(3) - r["clicks"]
             if upside > 0:
+                if args.skip_homepage and is_homepage(r["page"], args.base):
+                    home_skipped += 1
+                    continue
                 cand.append({**r, "upside": upside})
     cand.sort(key=lambda x: x["upside"], reverse=True)
     rows = [{"Query": c["query"], "Page": c["page"].replace(args.base, ""),
              "Impressions": c["impressions"], "Clicks": c["clicks"],
              "Position": round(c["position"], 1), "Est. extra clicks @top3": round(c["upside"])}
             for c in cand]
+    note = (f" Homepage excluded ({home_skipped} striking-distance row{'s' if home_skipped != 1 else ''} "
+            f"hidden — it ranks broadly for many queries)." if home_skipped else "")
     return {"title": "Low-hanging fruit (striking distance, position 4–20)",
             "finding": f"{len(rows)} query→page pairs rank 4–20 with ≥{args.lhf_min_impr} "
-                       f"impressions — realistic candidates to push onto page 1 / top 3.",
+                       f"impressions — realistic candidates to push onto page 1 / top 3." + note,
             "columns": ["Query", "Page", "Impressions", "Clicks", "Position", "Est. extra clicks @top3"],
             "rows": rows}
 
 
 def check_ctr_opportunity(agg, args):
     cand = []
+    home_skipped = 0
     for r in agg:
         if r["position"] <= 10 and r["impressions"] >= args.ctr_min_impr:
             exp = expected_ctr(r["position"])
             if r["ctr"] < exp * args.ctr_factor:
                 missed = (exp - r["ctr"]) * r["impressions"]
                 if missed > 0:
+                    if args.skip_homepage and is_homepage(r["page"], args.base):
+                        home_skipped += 1
+                        continue
                     cand.append({**r, "exp": exp, "missed": missed})
     cand.sort(key=lambda x: x["missed"], reverse=True)
     rows = [{"Query": c["query"], "Page": c["page"].replace(args.base, ""),
@@ -126,10 +159,12 @@ def check_ctr_opportunity(agg, args):
              "Position": round(c["position"], 1), "CTR": f"{c['ctr']*100:.1f}%",
              "Expected CTR": f"{c['exp']*100:.1f}%", "Missed clicks": round(c["missed"])}
             for c in cand]
+    note = (f" Homepage excluded ({home_skipped} row{'s' if home_skipped != 1 else ''} hidden — its "
+            f"CTR upside is limited)." if home_skipped else "")
     return {"title": "CTR opportunity (good position, low click-through)",
             "finding": f"{len(rows)} query→page pairs rank top-10 with ≥{args.ctr_min_impr} "
                        f"impressions but CTR below ~{int(args.ctr_factor*100)}% of expected — "
-                       f"title/meta-description rewrites likely lift clicks.",
+                       f"title/meta-description rewrites likely lift clicks." + note,
             "columns": ["Query", "Page", "Impressions", "Clicks", "Position", "CTR",
                         "Expected CTR", "Missed clicks"],
             "rows": rows}
@@ -277,6 +312,10 @@ def main():
     ap.add_argument("--date-range", default="", dest="date_range", help="e.g. 2026-03-27 → 2026-06-27")
     ap.add_argument("--base", default="", help="Base URL stripped from displayed paths, e.g. https://x.com")
     ap.add_argument("--brand-regex", dest="brand_regex", default="", help="Brand/site: exclusion for cannibalization")
+    ap.add_argument("--include-homepage", action="store_true", dest="include_homepage",
+                    help="Keep the homepage (root / locale roots / index files) in checks 1–3. By "
+                         "default it is excluded — it ranks broadly so it always shows overlap + "
+                         "striking-distance rows with limited real CTR upside. Uses --base to detect it.")
     ap.add_argument("--top", type=int, default=10, help="Rows shown per section in the report")
     # thresholds
     ap.add_argument("--cannib-min-impr", type=int, default=10, dest="cannib_min_impr")
@@ -291,6 +330,7 @@ def main():
                     default=r"/(wp-admin|wp-login|admin|cart|checkout|account|my-account|login|"
                             r"signin|register|wishlist|search|orders|cdn-cgi)(/|$|\?)")
     args = ap.parse_args()
+    args.skip_homepage = not args.include_homepage
 
     cannib = load_module("analyze_cannibalization.py", "cannib")
     exclude_re = re.compile(args.brand_regex, re.I) if args.brand_regex else None

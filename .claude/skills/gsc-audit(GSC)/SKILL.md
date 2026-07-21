@@ -104,7 +104,16 @@ check, and `<date>_audit.json` (counts). Omit `--pages`/`--sitemap` to skip chec
 
 **Thresholds** (all flags, tune per site): `--lhf-min-impr` (50), `--ctr-min-impr` (100),
 `--ctr-factor` (0.6 of expected CTR), `--outdated-before` (2025 → flags years ≤ 2024),
-`--cannib-min-impr` (10), `--bad-pattern` (no-index URL regex for check 4).
+`--cannib-min-impr` (10), `--bad-pattern` (no-index URL regex for check 4),
+`--include-homepage` (off — homepage is dropped from checks 1–3, see below).
+
+**Homepage is excluded from checks 1–3** (cannibalization, low-hanging-fruit, CTR) by default: it
+ranks broadly for many queries, so it always shows keyword overlap and striking-distance rows while
+its real CTR upside is limited. "Homepage" = the site root, locale roots (`/en/`, `/zh-hk/`), and
+index files (`/index.html`, `/index.php`), detected via `--base` — so pass `--base` for this to
+work. Each affected check keeps a one-line note in the report saying how many homepage rows were
+hidden. Checks 4–6 (index hygiene, outdated, sitemap) still include the homepage. Pass
+`--include-homepage` to keep it in all checks (e.g. a site whose homepage genuinely competes).
 
 `--brand-regex` is applied to **all** query-based checks (cannibalization, low-hanging-fruit, CTR,
 outdated), not just cannibalization — brand/navigational terms legitimately rank high and broad and
